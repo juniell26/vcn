@@ -1,41 +1,37 @@
 import socket
-import http.server
-import socketserver
+import main
 
-def forward_to_server():
+DEFAULT_BUFFER_SIZE = 4096
+FAST_BUFFER_SIZE = 131072
+
+def forward_to_server(request):
     # Define the IP address and port of the server
     server_ip = "example.com"  # Replace with the IP address or hostname of the server
     server_port = 80  # Replace with the appropriate port number for HTTP (typically 80)
 
-    # Create a socket and connect to the server
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((server_ip, server_port))
+    # Create a socket and bind to the Ethernet interface
+    interface_name = 'eth0' # Replace with the appropriate interface name
+    sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(3))
+    sock.bind((interface_name, 0))
 
-    # Send an HTTP GET request to the server
-    request = "GET / HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n"
-    sock.sendall(request.encode())
+    # Send the client's request to the server
+    sock.sendall(request)
 
     # Receive the server's response
-    response = ""
+    response = b""
+    payload_size = 0
+    buffer_size = DEFAULT_BUFFER_SIZE
     while True:
-        chunk = sock.recv(1024)
+        chunk = sock.recv(buffer_size)
         if not chunk:
             break
-        response += chunk.decode()
+        response += chunk
+        payload_size += len(chunk)
+        if payload_size > 5000000:
+            buffer_size = FAST_BUFFER_SIZE
 
     # Close the socket
     sock.close()
 
-    # Extract the response body from the response message
-    response_body = response.split("\r\n\r\n", 1)[1]
-
     # Return the server response to send back to the main.py
-    return response_body
-
-PORT = 8000
-
-Handler = http.server.SimpleHTTPRequestHandler
-
-with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    print(f"Serving directory at port {PORT}")
-    httpd.serve_forever()
+    return response

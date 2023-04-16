@@ -45,7 +45,7 @@ def process_data(packet, client_counter):
         ip_request_counts[source_ip].add_request()
 
         # Process the data received from the previous segment
-        provision_traffic= packet + " from segment 3"
+        provision_traffic = "{} from segment 3".format(packet)
 
         # Pass the processed traffic to segment4
         processed_traffic, client_counter = segment4.process_data(provision_traffic, client_counter)
@@ -65,7 +65,6 @@ def process_data(packet, client_counter):
         raise e
     except Exception as e:
         print("Error in Segment 3:", e)
-
 
 # Initialize the IP request counts dictionary
 ip_request_counts = {}
