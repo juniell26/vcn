@@ -1,6 +1,7 @@
 import scapy.all as scapy
 import os
 import json
+import time
 import segment2
 
 PACKETS_FILE = "logs.json"
@@ -36,6 +37,7 @@ def process_packet(packet):
         print(f"Connection from {src_ip}:{src_port} blocked due to anomaly detected.")
 
     # Save the packet information to the JSON file if it's not a duplicate
+    timestamp = time.time()
     packet_data = {
         "src_ip": src_ip,
         "dst_ip": dst_ip,
@@ -44,7 +46,8 @@ def process_packet(packet):
         "device": device,
         "handshake": handshake,
         "packet_location": packet_location,
-        "user_agent": user_agent
+        "user_agent": user_agent,
+        "timestamp": timestamp
     }
     with open(PACKETS_FILE, "r") as f:
         packet_dict = {tuple(json.loads(line).values()) for line in f}
@@ -52,18 +55,35 @@ def process_packet(packet):
         with open(PACKETS_FILE, "a") as f:
             json.dump(packet_data, f)
             f.write("\n")  # write a new line character to separate packets
-
-def receive_packet(packet_handler):
+            
+def print_current_packets(start_time, end_time):
+    # Print the packets that have timestamps within the specified time range
+    with open(PACKETS_FILE, "r") as f:
+        for line in f:
+            packet_data = json.loads(line)
+            timestamp = packet_data["timestamp"]
+            if start_time <= timestamp <= end_time:
+                print(line.strip())
+                
+                
+def receive_packet(packet_handler, capture_time=600):
     # Set up the packet capture filter
-
     capture_filter = "tcp and (dst port 80 or dst port 443)"  # capture HTTP and HTTPS traffic
 
     # Start capturing packets
-    scapy.sniff(filter=capture_filter, prn=packet_handler)
-    
+    packets = scapy.sniff(filter=capture_filter, timeout=capture_time)
+
+    # Process the captured packets
+    for packet in packets:
+        packet_handler(packet)
+
+    # Get the start and end times for the current capture window
+    start_time = packets[0].time
+    end_time = packets[-1].time
+
+    # Print the packets within the current capture window
+    print_current_packets(start_time, end_time)
+
     return
 
-# Call the receive_packet function with process_packet function as an argument to process the packets
-segment2.receive_packet(process_packet)
-
-print('segment 1 is running')
+process_packet, process_data = segment2.process_data()

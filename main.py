@@ -1,8 +1,7 @@
 import socket
+from datetime import datetime
 import segment1
 import gateway
-from datetime import datetime
-
 
 # Set the default buffer size
 DEFAULT_BUFFER_SIZE = 4096
@@ -14,6 +13,9 @@ proxy_port = 8080
 # Create a TCP/IP socket for the proxy server
 proxy_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 proxy_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+# Bind the socket to the address and port
+proxy_socket.bind((proxy_address, proxy_port))
 
 # Listen for incoming connections
 proxy_socket.listen(5)
@@ -61,7 +63,6 @@ def get_buffer_size(payload_size):
     else:
         return DEFAULT_BUFFER_SIZE
 
-
 # Define a function to get the buffer
 def get_buffer(request, buffer_size):
     buffer = b""
@@ -71,6 +72,11 @@ def get_buffer(request, buffer_size):
             break
         buffer += data
     return buffer
+
+# Define a function to send the response back to the client
+def send_response(client_socket, response_data):
+    # Send the response data back to the client
+    client_socket.sendall(response_data)
 
 # Define a function to process the packet
 def process_packet(request, buffer_size):
@@ -104,33 +110,14 @@ while True:
     
     # Pass the entire request to segment1
     segment1.process_packet(request, buffer_size)
+        
+    # Wait for the response from the gateway
+    response_data = gateway.received_response()
+
+    # Send the response data back to the client
+    send_response(client_socket, response_data)
+
+    # Close the client socket
+    client_socket.close()
+
     
-    # Loop forever, accepting incoming connections
-    while True:
-        # Accept a connection
-        client_socket, client_address = proxy_socket.accept()
-        print('A client has connected')
-
-        # Print the client IP address
-        print("Client connected from:", client_address[0])
-
-        # Read the incoming request from the client
-        request = client_socket.recv(DEFAULT_BUFFER_SIZE)
-
-        # Determine the size of the payload
-        payload_size = get_payload_size(request)
-
-        # Get the buffer size based on the payload size
-        buffer_size = get_buffer_size(payload_size)
-
-        # Pass the entire request to segment1
-        request = segment1.process_packet(request, buffer_size)
-
-        # Send the modified request back to the client
-        client_socket.send(request)
-
-        # Close the client socket
-        client_socket.close()
-
-
-
