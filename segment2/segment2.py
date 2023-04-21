@@ -33,9 +33,10 @@ def process_data(packet, receiver_function):
     processed_data = packet  # do some processing
     receiver_function(processed_data)  # pass the processed data to the receiver function
     
-    return
+    return processed_data
 
 def process_packet(packet):
+    provisional = False
     try:
         # Extract relevant information from the packet
         src_ip = packet.get("src_ip")
@@ -48,22 +49,19 @@ def process_packet(packet):
         user_agent = packet.get("user_agent")
 
         # Check if all the required keys are present and have the expected data types
-        if not all(key in packet for key in ["src_ip", "dst_ip", "src_port", "dst_port", "device", "handshake", "user_agent"]) or \
+        if not all(key in packet for key in ["src_ip", "dst_ip", "src_port", "dst_port", "device", "user_agent"]) or \
             ("packet_location" in packet and not isinstance(packet["packet_location"], str)) or \
+            ("handshake" in packet and not isinstance(packet["handshake"], bool)) or \
             not isinstance(packet["src_ip"], str) or not isinstance(packet["dst_ip"], str) or \
-            not isinstance(packet["device"], str) or not isinstance(packet["handshake"], bool) or \
-            not isinstance(packet["user_agent"], str) or not isinstance(packet["src_port"], int) or \
-            not isinstance(packet["dst_port"], int):
-            provisional = False
-
+            not isinstance(packet["device"], str) or not isinstance(packet["user_agent"], str) or \
+            not isinstance(packet["src_port"], int) or not isinstance(packet["dst_port"], int):
+        # invalid packet
+            
             # Process the packet data and get the processed data
-            processed_data = process_data(packet)
-
-            # Do something with the processed data
-            provisional = True
+            processed_data = process_data(packet, receiver_function=segment3.provision_traffic)
 
             # Provision the packet to move to the next module
-            segment3.provision_packet({
+            segment3.provision_traffic({
                 "src_ip": src_ip,
                 "dst_ip": dst_ip,
                 "src_port": src_port,
@@ -74,9 +72,12 @@ def process_packet(packet):
                 "user_agent": user_agent,
                 "processed_data": processed_data
             })
+            
+            provisional = True
 
     except Exception as e:
         print("Error in Segment 2:", e)
     
     return provisional
+
 print("segment 2 is running")

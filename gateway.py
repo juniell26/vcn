@@ -6,7 +6,7 @@ FAST_BUFFER_SIZE = 131072
 
 def forward_to_server(request):
     # Define the IP address and port of the server
-    server_ip = "192.168.56.1"  # Replace with the IP address or hostname of the server
+    server_ip = "example.com"  # Replace with the IP address or hostname of the server
     server_port = 80  # Replace with the appropriate port number for HTTP (typically 80)
 
     # Create a new socket and connect to the server

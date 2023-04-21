@@ -9,7 +9,7 @@ vectorizer = joblib.load("vectorizer.pkl")
 # Create a set to store blocked IP addresses
 blocked_ips = set()
 
-def process_data(data, client_ip):
+def process_traffic(data, client_ip):
     # Check if the client's IP address has been blocked
     if client_ip in blocked_ips:
         print("Blocked traffic from", client_ip)
